@@ -1,16 +1,15 @@
 const CACHE_NAME = 'km-control-v1';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/app.js',
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png',
+    './',
+    './index.html',
+    './app.js',
+    './manifest.json',
+    './icon-192.png',
+    './icon-512.png',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// Instalação
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -18,7 +17,6 @@ self.addEventListener('install', event => {
     );
 });
 
-// Ativação
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
@@ -33,12 +31,10 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch (estratégia: Network First, fallback para Cache)
 self.addEventListener('fetch', event => {
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Clona a resposta
                 const responseToCache = response.clone();
                 caches.open(CACHE_NAME)
                     .then(cache => {
