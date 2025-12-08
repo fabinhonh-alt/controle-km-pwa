@@ -704,5 +704,10 @@
             }
 
             document.getElementById('btnBaseText').style.display = 'none';
-            document.getElementById('
+            document.getElementById('btnBaseLoading').style.display = 'inline-block';
 
+            try {
+                const coords = await buscarCoordenadas(endereco, true);
+                if (!coords) {
+                    alert('Endereço não encontrado.');
+                    return;
