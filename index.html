@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de KM</title>
+    <title>Controle de KM - Banco</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * {
@@ -112,7 +112,7 @@
             flex-wrap: wrap;
         }
 
-        input[type="text"] {
+        input[type="text"], input[type="number"] {
             flex: 1;
             min-width: 180px;
             padding: 14px;
@@ -327,6 +327,7 @@
             margin-bottom: 10px;
             border-left: 4px solid #667eea;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .historico-date {
@@ -346,6 +347,12 @@
             color: #667eea;
             font-weight: 600;
             font-size: 15px;
+        }
+
+        .historico-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
 
         .stats {
@@ -422,6 +429,83 @@
             border: 1px solid #ffeaa7;
         }
 
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            width: 50px;
+            height: 26px;
+            appearance: none;
+            background: #ccc;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background: #48bb78;
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            left: 26px;
+        }
+
+        .trecho-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .trecho-header {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .trecho-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .trecho-pedagio {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -437,12 +521,16 @@
                 flex-direction: column;
             }
 
-            input[type="text"] {
+            input[type="text"], input[type="number"] {
                 min-width: 100%;
             }
 
             #map {
                 height: 260px;
+            }
+
+            .trecho-info {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -450,8 +538,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚗 Controle de KM</h1>
-            <p class="subtitle">GPS + Rotas Reais - Ressarcimento</p>
+            <h1>🚗 Controle de KM - Banco</h1>
+            <p class="subtitle">Ressarcimento por Trechos</p>
         </div>
 
         <div class="tabs">
@@ -466,11 +554,11 @@
             <div class="section base-config">
                 <h2 class="section-title">🏠 Base Fixa</h2>
                 <div class="alert alert-warning">
-                    <strong>Dica:</strong> Configure seu endereço. Use GPS para rotas dinâmicas.
+                    <strong>Dica:</strong> Configure o endereço da superintendência.
                 </div>
 
                 <div class="input-group">
-                    <input type="text" id="enderecoBase" placeholder="Seu endereço (Gravataí/RS)">
+                    <input type="text" id="enderecoBase" placeholder="Endereço da superintendência">
                     <button class="btn btn-primary" onclick="configurarBase()">
                         <span id="btnBaseText">Salvar</span>
                         <span id="btnBaseLoading" class="loading" style="display: none;"></span>
@@ -484,6 +572,17 @@
                 </div>
 
                 <div id="mapaBase" style="height: 220px; border-radius: 10px; margin-top: 12px; display: none;"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">💰 Configuração de Custo</h2>
+                <div class="input-group">
+                    <input type="number" id="valorKm" placeholder="Valor por KM (ex: 1.30)" step="0.01" min="0">
+                    <button class="btn btn-primary" onclick="salvarValorKm()">Salvar Valor/KM</button>
+                </div>
+                <div id="infoValorKm" class="alert alert-info" style="display: none;">
+                    <strong>Valor atual:</strong> R$ <span id="valorKmDisplay">0,00</span>/km
+                </div>
             </div>
         </div>
 
@@ -509,9 +608,14 @@
         <div id="viagem" class="tab-content">
             <div class="section">
                 <h2 class="section-title">🚙 Montar Rota</h2>
-                <p style="color: #666; margin-bottom: 12px; font-size: 14px;">
-                    Clique nas agências na ordem visitada
-                </p>
+
+                <div class="toggle-switch">
+                    <input type="checkbox" id="otimizarRota" onchange="atualizarOtimizacao()">
+                    <label for="otimizarRota">
+                        <strong>🧭 Otimizar rota automaticamente</strong>
+                        <br><small>Reordena as agências para minimizar KM</small>
+                    </label>
+                </div>
 
                 <button class="btn-gps" id="btnGPS" onclick="usarGPSAtual()">
                     📍 Usar GPS Atual
@@ -538,11 +642,27 @@
                 <div id="sequenciaViagem" class="sequencia-items"></div>
                 <div class="total-km">
                     <div>Total: <span id="totalKm">0 km</span></div>
-                    <small style="opacity: 0.8; font-size: 14px;">Distância real de carro</small>
+                    <small style="opacity: 0.8; font-size: 14px;">Distância arredondada pra cima</small>
                 </div>
+
+                <div id="detalhesViagem" style="display: none;">
+                    <div class="section" style="margin-top: 15px;">
+                        <h3 class="section-title">📝 Detalhes da Viagem</h3>
+
+                        <div class="input-group">
+                            <input type="number" id="kmInicial" placeholder="KM inicial do odômetro" min="0">
+                        </div>
+
+                        <div id="trechosDetalhes"></div>
+                    </div>
+                </div>
+
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-success" onclick="salvarViagem()" id="btnSalvar" disabled style="flex: 1;">
-                        💾 Salvar
+                    <button class="btn btn-success" onclick="prepararSalvamento()" id="btnPreparar" disabled style="flex: 1;">
+                        📝 Preencher Detalhes
+                    </button>
+                    <button class="btn btn-success" onclick="salvarViagem()" id="btnSalvar" disabled style="flex: 1; display: none;">
+                        💾 Salvar Viagem
                     </button>
                     <button class="btn btn-secondary" onclick="limparSequencia()" style="flex: 1;">
                         🔄 Limpar
@@ -553,7 +673,7 @@
 
         <div id="historico" class="tab-content">
             <div class="section">
-                <h2 class="section-title">📋 Histórico</h2>
+                <h2 class="section-title">📋 Histórico de Viagens</h2>
                 <div id="listaHistorico"></div>
             </div>
         </div>
@@ -573,6 +693,10 @@
                     <div class="stat-card">
                         <div class="stat-value" id="statTotal">0</div>
                         <div class="stat-label">KM Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statValor">R$ 0</div>
+                        <div class="stat-label">Valor Total</div>
                     </div>
                 </div>
             </div>
@@ -597,12 +721,15 @@
         let destinos = JSON.parse(localStorage.getItem('destinos')) || [];
         let viagens = JSON.parse(localStorage.getItem('viagens')) || [];
         let sequenciaAtual = [];
+        let trechosCalculados = [];
         let map, rotaLayer, baseMap;
         let posicaoGPSAtual = null;
+        let valorKm = parseFloat(localStorage.getItem('valorKm')) || 0;
         const cacheCoordenadas = JSON.parse(localStorage.getItem('cacheCoords')) || {};
 
         document.addEventListener('DOMContentLoaded', function() {
             inicializarBase();
+            inicializarValorKm();
             atualizarListaDestinos();
             atualizarBotoesDestinos();
             atualizarHistorico();
@@ -622,6 +749,27 @@
             } else if (tabName === 'relatorio') {
                 atualizarEstatisticas();
             }
+        }
+
+        function inicializarValorKm() {
+            if (valorKm > 0) {
+                document.getElementById('valorKm').value = valorKm.toFixed(2);
+                document.getElementById('infoValorKm').style.display = 'block';
+                document.getElementById('valorKmDisplay').textContent = valorKm.toFixed(2);
+            }
+        }
+
+        function salvarValorKm() {
+            const valor = parseFloat(document.getElementById('valorKm').value);
+            if (isNaN(valor) || valor <= 0) {
+                alert('Digite um valor válido (ex: 1.30)');
+                return;
+            }
+            valorKm = valor;
+            localStorage.setItem('valorKm', valor);
+            document.getElementById('infoValorKm').style.display = 'block';
+            document.getElementById('valorKmDisplay').textContent = valor.toFixed(2);
+            alert('✅ Valor salvo: R$ ' + valor.toFixed(2) + '/km');
         }
 
         async function usarGPSAtual() {
@@ -698,7 +846,7 @@
             const endereco = document.getElementById('enderecoBase').value.trim();
 
             if (!endereco) {
-                alert('Digite seu endereço.');
+                alert('Digite o endereço da superintendência.');
                 return;
             }
 
@@ -922,6 +1070,12 @@
             atualizarBotoesDestinos();
         }
 
+        function atualizarOtimizacao() {
+            if (sequenciaAtual.length > 0) {
+                desenharRota();
+            }
+        }
+
         function atualizarSequencia() {
             const container = document.getElementById('sequenciaViagem');
             const totalElement = document.getElementById('totalKm');
@@ -933,7 +1087,8 @@
                     </div>
                 `;
                 totalElement.textContent = '0 km';
-                document.getElementById('btnSalvar').disabled = true;
+                document.getElementById('btnPreparar').disabled = true;
+                document.getElementById('detalhesViagem').style.display = 'none';
                 return;
             }
 
@@ -959,9 +1114,13 @@
 
         function limparSequencia() {
             sequenciaAtual = [];
+            trechosCalculados = [];
             posicaoGPSAtual = null;
             document.getElementById('gpsInfo').style.display = 'none';
             document.getElementById('btnGPS').innerHTML = '📍 Usar GPS Atual';
+            document.getElementById('detalhesViagem').style.display = 'none';
+            document.getElementById('btnPreparar').style.display = 'block';
+            document.getElementById('btnSalvar').style.display = 'none';
             atualizarSequencia();
             atualizarBotoesDestinos();
         }
@@ -1004,18 +1163,53 @@
                     return;
                 }
 
-                const pontosRota = [pontoInicial, ...sequenciaAtual, pontoInicial];
+                let sequenciaFinal = [...sequenciaAtual];
+
+                // Otimização de rota se ativada
+                if (document.getElementById('otimizarRota').checked && sequenciaAtual.length > 1) {
+                    const coordsParaOtimizar = [pontoInicial, ...sequenciaAtual].map(p => `${p.lng},${p.lat}`).join(';');
+                    const urlTrip = `https://router.project-osrm.org/trip/v1/driving/${coordsParaOtimizar}?source=first&destination=first&roundtrip=true`;
+
+                    const tripResponse = await fetch(urlTrip);
+                    const tripData = await tripResponse.json();
+
+                    if (tripData.code === 'Ok' && tripData.trips.length > 0) {
+                        const ordemOtimizada = tripData.waypoints.map(wp => wp.waypoint_index);
+                        sequenciaFinal = ordemOtimizada.slice(1, -1).map(idx => sequenciaAtual[idx - 1]);
+                    }
+                }
+
+                const pontosRota = [pontoInicial, ...sequenciaFinal, pontoInicial];
                 const coordenadas = pontosRota.map(p => `${p.lng},${p.lat}`).join(';');
 
-                const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson`;
+                const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson&steps=true`;
 
                 const response = await fetch(url);
                 const data = await response.json();
 
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const rota = data.routes[0];
-                    const distanciaKm = (rota.distance / 1000).toFixed(2);
-                    const tempoMinutos = Math.round(rota.duration / 60);
+
+                    // Calcular trechos
+                    trechosCalculados = [];
+                    let kmAcumulado = 0;
+
+                    rota.legs.forEach((leg, index) => {
+                        const kmTrecho = Math.ceil(leg.distance / 1000); // Arredonda pra cima
+                        const origem = index === 0 ? pontoInicial.nome || pontoInicial.endereco : sequenciaFinal[index - 1].nome;
+                        const destino = index === rota.legs.length - 1 ? pontoInicial.nome || pontoInicial.endereco : sequenciaFinal[index].nome;
+
+                        trechosCalculados.push({
+                            numero: index + 1,
+                            origem,
+                            destino,
+                            kmTrecho,
+                            temPedagio: false,
+                            valorPedagio: 0
+                        });
+
+                        kmAcumulado += kmTrecho;
+                    });
 
                     rotaLayer = L.geoJSON(rota.geometry, {
                         style: {
@@ -1031,9 +1225,10 @@
 
                     map.fitBounds(rotaLayer.getBounds().pad(0.1));
 
-                    totalElement.innerHTML = `${distanciaKm} km <small>(~${tempoMinutos} min)</small>`;
+                    const tempoMinutos = Math.round(rota.duration / 60);
+                    totalElement.innerHTML = `${kmAcumulado} km <small>(~${tempoMinutos} min)</small>`;
                     statusDiv.style.display = 'none';
-                    document.getElementById('btnSalvar').disabled = false;
+                    document.getElementById('btnPreparar').disabled = false;
 
                 } else {
                     throw new Error('Rota não encontrada');
@@ -1046,37 +1241,106 @@
             }
         }
 
-        async function salvarViagem() {
-            if (sequenciaAtual.length === 0) {
-                alert('Adicione agências à rota!');
+        function prepararSalvamento() {
+            if (valorKm === 0) {
+                alert('Configure o valor do KM na aba Base primeiro!');
+                switchTab('config');
                 return;
             }
 
-            const kmText = document.getElementById('totalKm').innerHTML;
-            const kmMatch = kmText.match(/[\d.]+/);
-            const kmTotal = kmMatch ? parseFloat(kmMatch[0]) : 0;
-
-            if (isNaN(kmTotal) || kmTotal <= 0) {
+            if (trechosCalculados.length === 0) {
                 alert('Calcule a rota primeiro!');
                 return;
             }
+
+            document.getElementById('detalhesViagem').style.display = 'block';
+            document.getElementById('btnPreparar').style.display = 'none';
+            document.getElementById('btnSalvar').style.display = 'block';
+            document.getElementById('btnSalvar').disabled = false;
+
+            const container = document.getElementById('trechosDetalhes');
+            container.innerHTML = trechosCalculados.map((trecho, index) => `
+                <div class="trecho-item">
+                    <div class="trecho-header">Trecho ${trecho.numero}: ${trecho.origem} → ${trecho.destino}</div>
+                    <div class="trecho-info">
+                        <div><strong>Distância:</strong> ${trecho.kmTrecho} km</div>
+                        <div><strong>Valor:</strong> R$ ${(trecho.kmTrecho * valorKm).toFixed(2)}</div>
+                    </div>
+                    <div class="trecho-pedagio">
+                        <input type="checkbox" id="pedagio${index}" onchange="atualizarPedagio(${index})">
+                        <label for="pedagio${index}">Teve pedágio?</label>
+                        <input type="number" id="valorPedagio${index}" placeholder="R$ 0,00" step="0.01" min="0" style="width: 100px; display: none;" onchange="atualizarValorPedagio(${index})">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function atualizarPedagio(index) {
+            const checkbox = document.getElementById(`pedagio${index}`);
+            const inputValor = document.getElementById(`valorPedagio${index}`);
+
+            if (checkbox.checked) {
+                inputValor.style.display = 'inline-block';
+                trechosCalculados[index].temPedagio = true;
+            } else {
+                inputValor.style.display = 'none';
+                inputValor.value = '';
+                trechosCalculados[index].temPedagio = false;
+                trechosCalculados[index].valorPedagio = 0;
+            }
+        }
+
+        function atualizarValorPedagio(index) {
+            const valor = parseFloat(document.getElementById(`valorPedagio${index}`).value) || 0;
+            trechosCalculados[index].valorPedagio = valor;
+        }
+
+        function salvarViagem() {
+            const kmInicial = parseInt(document.getElementById('kmInicial').value);
+
+            if (isNaN(kmInicial) || kmInicial < 0) {
+                alert('Informe o KM inicial do odômetro!');
+                return;
+            }
+
+            if (trechosCalculados.length === 0) {
+                alert('Nenhum trecho calculado!');
+                return;
+            }
+
+            let kmAtual = kmInicial;
+            const trechosComOdometro = trechosCalculados.map(trecho => {
+                const kmFinal = kmAtual + trecho.kmTrecho;
+                const trechoCompleto = {
+                    ...trecho,
+                    kmInicial: kmAtual,
+                    kmFinal,
+                    valorKm: valorKm,
+                    valorEstimado: trecho.kmTrecho * valorKm
+                };
+                kmAtual = kmFinal;
+                return trechoCompleto;
+            });
 
             const viagem = {
                 id: Date.now(),
                 data: new Date().toISOString(),
                 base: posicaoGPSAtual ? 'GPS Atual' : base.endereco,
-                destinos: sequenciaAtual.map(d => d.nome),
-                kmTotal
+                trechos: trechosComOdometro,
+                kmTotal: trechosComOdometro.reduce((sum, t) => sum + t.kmTrecho, 0),
+                valorTotal: trechosComOdometro.reduce((sum, t) => sum + t.valorEstimado, 0),
+                pedagiosTotal: trechosComOdometro.reduce((sum, t) => sum + t.valorPedagio, 0)
             };
 
             viagens.push(viagem);
             salvarDados();
 
-            alert(`✅ Viagem salva!\n\n📏 ${kmTotal.toFixed(2)} km\n📍 ${viagem.destinos.join(' → ')}`);
+            alert(`✅ Viagem salva!\n\n📏 ${viagem.kmTotal} km\n💰 R$ ${viagem.valorTotal.toFixed(2)}\n🛣️ Pedágios: R$ ${viagem.pedagiosTotal.toFixed(2)}`);
 
             limparSequencia();
             atualizarHistorico();
             atualizarEstatisticas();
+            switchTab('historico');
         }
 
         function atualizarHistorico() {
@@ -1101,14 +1365,28 @@
 
                 return `
                     <div class="historico-item">
+                        <button class="btn btn-danger historico-delete" onclick="excluirViagem(${viagem.id})">🗑️</button>
                         <div class="historico-date">${dataFormatada}</div>
                         <div class="historico-route">
-                            🏠 ${viagem.base} → ${viagem.destinos.join(' → ')} → 🏠
+                            🏠 ${viagem.base} → ${viagem.trechos.length} trechos
                         </div>
-                        <div class="historico-km">📏 ${viagem.kmTotal.toFixed(2)} km</div>
+                        <div class="historico-km">
+                            📏 ${viagem.kmTotal} km | 💰 R$ ${viagem.valorTotal.toFixed(2)}
+                            ${viagem.pedagiosTotal > 0 ? ` | 🛣️ R¨D ¨D{viagem.pedagiosTotal.toFixed(2)}` : ''}
+                        </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function excluirViagem(id) {
+            if (confirm('Excluir esta viagem?\n\nEla será removida do histórico e dos relatórios.')) {
+                viagens = viagens.filter(v => v.id !== id);
+                salvarDados();
+                atualizarHistorico();
+                atualizarEstatisticas();
+                alert('✅ Viagem excluída!');
+            }
         }
 
         function atualizarEstatisticas() {
@@ -1128,10 +1406,12 @@
                 .reduce((sum, v) => sum + v.kmTotal, 0);
 
             const kmTotal = viagens.reduce((sum, v) => sum + v.kmTotal, 0);
+            const valorTotal = viagens.reduce((sum, v) => sum + v.valorTotal + v.pedagiosTotal, 0);
 
-            document.getElementById('statHoje').textContent = kmHoje.toFixed(1);
-            document.getElementById('statMes').textContent = kmMes.toFixed(1);
-            document.getElementById('statTotal').textContent = kmTotal.toFixed(1);
+            document.getElementById('statHoje').textContent = kmHoje.toFixed(0);
+            document.getElementById('statMes').textContent = kmMes.toFixed(0);
+            document.getElementById('statTotal').textContent = kmTotal.toFixed(0);
+            document.getElementById('statValor').textContent = 'R$ ' + valorTotal.toFixed(0);
         }
 
         function exportarCSV() {
@@ -1140,14 +1420,19 @@
                 return;
             }
 
-            let csv = 'Data,Hora,Base,Rota,Quilometragem\n';
+            let csv = 'Data,Hora,Trecho,Origem,Destino,KM Inicial,KM Final,KM Rodados,Pedagio,Valor KM,Valor Total\n';
 
             viagens.forEach(v => {
                 const data = new Date(v.data);
                 const dataStr = data.toLocaleDateString('pt-BR');
                 const horaStr = data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
-                const rota = v.destinos.join(' → ');
-                csv += `"${dataStr}","${horaStr}","${v.base}","${rota}","${v.kmTotal.toFixed(2)}"\n`;
+
+                v.trechos.forEach(t => {
+                    csv += `"${dataStr}","${horaStr}","${t.numero}","${t.origem}","${t.destino}",`;
+                    csv += `"${t.kmInicial}","${t.kmFinal}","${t.kmTrecho}",`;
+                    csv += `"${t.temPedagio ? 'R$ ' + t.valorPedagio.toFixed(2) : 'Não'}",`;
+                    csv += `"R$ ${t.valorKm.toFixed(2)}","R$ ${t.valorEstimado.toFixed(2)}"\n`;
+                });
             });
 
             downloadArquivo(csv, `ressarcimento_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
@@ -1159,18 +1444,40 @@
                 return;
             }
 
-            let texto = '=== RELATÓRIO DE QUILOMETRAGEM ===\n\n';
+            let texto = '═══════════════════════════════n';
+            texto += '   RELATÓRIO DE RESSARCIMENTO - BANCO\n';
+            texto += '═══════════════════════════════════════════════\n\n';
 
             viagens.forEach(v => {
                 const data = new Date(v.data);
-                texto += `${data.toLocaleDateString('pt-BR')} ${data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}\n`;
-                texto += `Base: ${v.base}\n`;
-                texto += `Rota: ${v.destinos.join(' → ')}\n`;
-                texto += `KM: ${v.kmTotal.toFixed(2)}\n\n`;
+                texto += `DATA: ${data.toLocaleDateString('pt-BR')} ${data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}\n`;
+                texto += `BASE: ${v.base}\n\n`;
+
+                v.trechos.forEach(t => {
+                    texto += `TRECHO ${t.numero}\n`;
+                    texto += `Origem: ${t.origem}\n`;
+                    texto += `Destino: ${t.destino}\n`;
+                    texto += `Odômetro inicial: ${t.kmInicial}\n`;
+                    texto += `Odômetro final: ${t.kmFinal}\n`;
+                    texto += `KM rodados: ${t.kmTrecho} km\n`;
+                    texto += `Pedágio: ${t.temPedagio ? 'R$ ' + t.valorPedagio.toFixed(2) : 'Não'}\n`;
+                    texto += `Valor estimado: R$ ${t.valorEstimado.toFixed(2)}\n`;
+                    texto += `───────────────────────────────────────────────\n`;
+                });
+
+                texto += `\nTOTAL DA VIAGEM\n`;
+                texto += `KM totais: ${v.kmTotal} km\n`;
+                texto += `Valor KM: R$ ${v.valorTotal.toFixed(2)}\n`;
+                texto += `Pedágios: R$ ${v.pedagiosTotal.toFixed(2)}\n`;
+                texto += `TOTAL GERAL: R$ ${(v.valorTotal + v.pedagiosTotal).toFixed(2)}\n`;
+                texto += `═══════════════════════════════════════════════\n\n`;
             });
 
-            const total = viagens.reduce((sum, v) => sum + v.kmTotal, 0);
-            texto += `\nTOTAL: ${total.toFixed(2)} km`;
+            const totalKm = viagens.reduce((sum, v) => sum + v.kmTotal, 0);
+            const totalValor = viagens.reduce((sum, v) => sum + v.valorTotal + v.pedagiosTotal, 0);
+            texto += `\nRESUMO GERAL\n`;
+            texto += `Total KM: ${totalKm} km\n`;
+            texto += `Total Valor: R$ ${totalValor.toFixed(2)}\n`;
 
             downloadArquivo(texto, `ressarcimento_${new Date().toISOString().split('T')[0]}.txt`, 'text/plain');
         }
