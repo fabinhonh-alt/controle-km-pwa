@@ -2,17 +2,9 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="KM Control">
-    <meta name="theme-color" content="#667eea">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de KM - GPS</title>
-
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     <style>
         * {
             margin: 0;
@@ -25,4 +17,692 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            min-height: calc(100vh - 20px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e0e0e0;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 18px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 180px;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            min-width: 110px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-gps {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 17px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px auto;
+            width: 100%;
+            max-width: 400px;
+            border: none;
+        }
+
+        .btn-gps:active {
+            transform: scale(0.97);
+        }
+
+        .btn-gps:disabled {
+            background: #a0a0a0;
+        }
+
+        .base-config {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border: 2px solid #f0932b;
+        }
+
+        .destinos-list, .viagem-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .destino-item, .destino-btn {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .destino-btn:active {
+            transform: scale(0.95);
+        }
+
+        .destino-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .destino-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+
+        .destino-btn.selected .destino-name {
+            color: white;
+        }
+
+        .destino-address {
+            color: #718096;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .destino-btn.selected .destino-address {
+            color: rgba(255,255,255,0.9);
+        }
+
+        #map {
+            height: 320px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 2px solid #e2e8f0;
+            background: #f0f0f0;
+        }
+
+        .sequencia {
+            background: #edf2f7;
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .sequencia-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d3748;
+            font-size: 17px;
+        }
+
+        .sequencia-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .sequencia-item {
+            background: white;
+            padding: 12px 14px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .sequencia-number {
+            background: #667eea;
+            color: white;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .total-km {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .gps-info {
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 10px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #1976d2;
+        }
+
+        .historico-item {
+            background: #f7fafc;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .historico-date {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .historico-route {
+            color: #4a5568;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .historico-km {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 35px 15px;
+            color: #a0aec0;
+        }
+
+        .empty-state-icon {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 5px;
+                border-radius: 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            input[type="text"] {
+                min-width: 100%;
+            }
+
+            #map {
+                height: 260px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Controle de KM</h1>
+            <p class="subtitle">GPS + Rotas Reais - Ressarcimento</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('config')">🏠 Base</button>
+            <button class="tab" onclick="switchTab('destinos')">📍 Destinos</button>
+            <button class="tab" onclick="switchTab('viagem')">🚙 Viagem</button>
+            <button class="tab" onclick="switchTab('historico')">📋 Histórico</button>
+            <button class="tab" onclick="switchTab('relatorio')">📊 Relatório</button>
+        </div>
+
+        <div id="config" class="tab-content active">
+            <div class="section base-config">
+                <h2 class="section-title">🏠 Base Fixa</h2>
+                <div class="alert alert-warning">
+                    <strong>Dica:</strong> Configure seu endereço. Use GPS para rotas dinâmicas.
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="enderecoBase" placeholder="Seu endereço (Gravataí/RS)">
+                    <button class="btn btn-primary" onclick="configurarBase()">
+                        <span id="btnBaseText">Salvar</span>
+                        <span id="btnBaseLoading" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+
+                <div id="infoBase" style="display: none;" class="alert alert-success">
+                    <strong>Base:</strong> <span id="enderecoBaseDisplay"></span>
+                    <br><small>Coords: <span id="coordsBase"></span></small>
+                    <button class="btn btn-danger" onclick="limparBase()" style="margin-top: 8px;">Alterar</button>
+                </div>
+
+                <div id="mapaBase" style="height: 220px; border-radius: 10px; margin-top: 12px; display: none;"></div>
+            </div>
+        </div>
+
+        <div id="destinos" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📍 Cadastrar Agência</h2>
+                <div class="input-group">
+                    <input type="text" id="nomeDestino" placeholder="Nome da agência">
+                    <input type="text" id="enderecoDestino" placeholder="Endereço completo">
+                    <button class="btn btn-primary" onclick="adicionarDestino()">
+                        <span id="btnDestinoText">Adicionar</span>
+                        <span id="btnDestinoLoading" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Agências Cadastradas</h2>
+                <div id="listaDestinos" class="destinos-list"></div>
+            </div>
+        </div>
+
+        <div id="viagem" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">🚙 Montar Rota</h2>
+                <p style="color: #666; margin-bottom: 12px; font-size: 14px;">
+                    Clique nas agências na ordem visitada
+                </p>
+
+                <button class="btn-gps" id="btnGPS" onclick="usarGPSAtual()">
+                    📍 Usar GPS Atual
+                </button>
+
+                <div id="gpsInfo" class="gps-info" style="display: none;">
+                    <strong>GPS:</strong> <span id="gpsCoords"></span>
+                    <br><small>Usando como base temporária</small>
+                </div>
+
+                <div id="botoesDestinos" class="viagem-buttons"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">🗺️ Mapa da Rota</h2>
+                <div id="rotaInfo" class="rota-info" style="display: none;">
+                    <strong>Calculando rota...</strong>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="sequencia">
+                <div class="sequencia-title">📋 Sequência</div>
+                <div id="sequenciaViagem" class="sequencia-items"></div>
+                <div class="total-km">
+                    <div>Total: <span id="totalKm">0 km</span></div>
+                    <small style="opacity: 0.8; font-size: 14px;">Distância real de carro</small>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-success" onclick="salvarViagem()" id="btnSalvar" disabled style="flex: 1;">
+                        💾 Salvar
+                    </button>
+                    <button class="btn btn-secondary" onclick="limparSequencia()" style="flex: 1;">
+                        🔄 Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="historico" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📋 Histórico</h2>
+                <div id="listaHistorico"></div>
+            </div>
+        </div>
+
+        <div id="relatorio" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📊 Estatísticas</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statHoje">0</div>
+                        <div class="stat-label">KM Hoje</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statMes">0</div>
+                        <div class="stat-label">KM Mês</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">KM Total</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">📤 Exportar</h2>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="exportarCSV()" style="flex: 1;">
+                        📊 CSV
+                    </button>
+                    <button class="btn btn-primary" onclick="exportarTXT()" style="flex: 1;">
+                        📄 TXT
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // JS embutido pra evitar problemas de carregamento
+        let base = JSON.parse(localStorage.getItem('base')) || null;
+        let destinos = JSON.parse(localStorage.getItem('destinos')) || [];
+        let viagens = JSON.parse(localStorage.getItem('viagens')) || [];
+        let sequenciaAtual = [];
+        let map, rotaLayer, baseMap;
+        let posicaoGPSAtual = null;
+        const cacheCoordenadas = JSON.parse(localStorage.getItem('cacheCoords')) || {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            inicializarBase();
+            atualizarListaDestinos();
+            atualizarBotoesDestinos();
+            atualizarHistorico();
+            atualizarEstatisticas();
+            initMap();
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'viagem' && (base || posicaoGPSAtual) && sequenciaAtual.length > 0) {
+                desenharRota();
+            } else if (tabName === 'relatorio') {
+                atualizarEstatisticas();
+            }
+        }
+
+        async function usarGPSAtual() {
+            const btnGPS = document.getElementById('btnGPS');
+            btnGPS.disabled = true;
+            btnGPS.innerHTML = '<span class="loading"></span> Buscando GPS...';
+
+            if (!navigator.geolocation) {
+                alert('GPS não suportado. Use base fixa.');
+                btnGPS.disabled = false;
+                btnGPS.innerHTML = '📍 Usar GPS Atual';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    posicaoGPSAtual = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        nome: 'GPS Atual',
+                        endereco: 'Localização detectada'
+                    };
+
+                    document.getElementById('gpsInfo').style.display = 'block';
+                    document.getElementById('gpsCoords').textContent = `${posicaoGPSAtual.lat.toFixed(6)}, ${posicaoGPSAtual.lng.toFixed(6)}`;
+
+                    if (map) {
+                        map.setView([posicaoGPSAtual.lat, posicaoGPSAtual.lng], 15);
+                        L.marker([posicaoGPSAtual.lat, posicaoGPSAtual.lng]).addTo(map)
+                            .bindPopup('<b>Você está aqui</b>')
+                            .openPopup();
+                    }
+
+                    alert('✅ GPS capturado!');
+                    btnGPS.disabled = false;
+                    btnGPS.innerHTML = '✅ GPS Ativo';
+                },
+                (error) => {
+                    let msg = 'Erro GPS: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            msg += 'Permissão negada. Vá em Configurações > Safari > Localização.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            msg += 'Localização indisponível.';
+                            break;
+                        default:
+                            msg += 'Erro desconhecido.';
+                    }
+                    alert(msg);
+                    btnGPS.disabled = false;
+                    btnGPS.innerHTML = '📍 Usar GPS Atual';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        function inicializarBase() {
+            if (base) {
+                document.getElementById('enderecoBase').value = base.endereco;
+                document.getElementById('infoBase').style.display = 'block';
+                document.getElementById('enderecoBaseDisplay').textContent = base.endereco;
+                document.getElementById('coordsBase').textContent = `${base.lat.toFixed(6)}, ${base.lng.toFixed(6)}`;
+                document.getElementById('btnBaseText').textContent = 'Atualizar';
+                initBaseMap();
+            }
+        }
+
+        async function configurarBase() {
+            const endereco = document.getElementById('enderecoBase').value.trim();
+
+            if (!endereco) {
+                alert('Digite seu endereço.');
+                return;
+            }
+
+            document.getElementById('btnBaseText').style.display = 'none';
+            document.getElementById('
 
