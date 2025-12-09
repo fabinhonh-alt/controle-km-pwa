@@ -762,8 +762,8 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <script>
         // Configurações Google Drive - SUBSTITUA pelos seus valores do Google Cloud Console
-        const CLIENT_ID = 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com'; // Ex: 123456789-abcde.apps.googleusercontent.com
-        const API_KEY = 'SUA_API_KEY_AQUI'; // Crie em Credenciais > Chave de API
+        const CLIENT_ID = '230807712924-iehh5c8dbsh9mn8hfd3gb89vufmg1tsu.apps.googleusercontent.com'; // Ex: 123456789-abcde.apps.googleusercontent.com
+        const API_KEY = 'AIzaSyAbKtaEb9MO5DD7DijDHnYbVl2xxejmJQI'; // Crie em Credenciais > Chave de API
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
         const FILE_NAME = 'controle-km-dados.json';
