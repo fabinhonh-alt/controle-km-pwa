@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de KM - Banco</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            min-height: calc(100vh - 20px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e0e0e0;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 18px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"], input[type="number"] {
+            flex: 1;
+            min-width: 180px;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            min-width: 110px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-gps {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 17px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px auto;
+            width: 100%;
+            max-width: 400px;
+            border: none;
+        }
+
+        .btn-gps:active {
+            transform: scale(0.97);
+        }
+
+        .btn-gps:disabled {
+            background: #a0a0a0;
+        }
+
+        .base-config {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border: 2px solid #f0932b;
+        }
+
+        .destinos-list, .viagem-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .destino-item, .destino-btn {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .destino-btn:active {
+            transform: scale(0.95);
+        }
+
+        .destino-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .destino-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+
+        .destino-btn.selected .destino-name {
+            color: white;
+        }
+
+        .destino-address {
+            color: #718096;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .destino-btn.selected .destino-address {
+            color: rgba(255,255,255,0.9);
+        }
+
+        #map {
+            height: 320px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border: 2px solid #e2e8f0;
+            background: #f0f0f0;
+        }
+
+        .sequencia {
+            background: #edf2f7;
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .sequencia-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #2d3748;
+            font-size: 17px;
+        }
+
+        .sequencia-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .sequencia-item {
+            background: white;
+            padding: 12px 14px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .sequencia-number {
+            background: #667eea;
+            color: white;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .total-km {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .gps-info {
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 10px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #1976d2;
+        }
+
+        .historico-item {
+            background: #f7fafc;
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .historico-date {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .historico-route {
+            color: #4a5568;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .historico-km {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .historico-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 35px 15px;
+            color: #a0aec0;
+        }
+
+        .empty-state-icon {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            width: 50px;
+            height: 26px;
+            appearance: none;
+            background: #ccc;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked {
+            background: #48bb78;
+        }
+
+        .toggle-switch input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked::before {
+            left: 26px;
+        }
+
+        .trecho-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .trecho-header {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .trecho-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .trecho-pedagio {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status {
+            text-align: center;
+            padding: 10px;
+            background: #e6fffa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 5px;
+                border-radius: 15px;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            input[type="text"], input[type="number"] {
+                min-width: 100%;
+            }
+            
+            #map {
+                height: 260px;
+            }
+
+            .trecho-info {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                gap: 4px;
+            }
+
+            .tab {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Controle de KM - Banco</h1>
+            <p class="subtitle">Ressarcimento por Trechos + Sync Google Drive</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('config')">🏠 Base</button>
+            <button class="tab" onclick="switchTab('destinos')">📍 Destinos</button>
+            <button class="tab" onclick="switchTab('viagem')">🚙 Viagem</button>
+            <button class="tab" onclick="switchTab('historico')">📋 Histórico</button>
+            <button class="tab" onclick="switchTab('relatorio')">📊 Relatório</button>
+        </div>
+
+        <div id="syncStatus" class="sync-status" style="display: none;">
+            <span id="syncMessage">Sincronizando com Google Drive...</span>
+        </div>
+
+        <!-- ABA BASE -->
+        <div id="config" class="tab-content active">
+            <div class="section base-config">
+                <h2 class="section-title">🏠 Base Fixa</h2>
+                <div class="alert alert-warning">
+                    <strong>Dica:</strong> Configure o endereço da superintendência.
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="enderecoBase" placeholder="Endereço da superintendência">
+                    <button class="btn btn-primary" onclick="configurarBase()">
+                        <span id="btnBaseText">Salvar</span>
+                        <span id="btnBaseLoading" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+
+                <div id="infoBase" style="display: none;" class="alert alert-success">
+                    <strong>Base:</strong> <span id="enderecoBaseDisplay"></span>
+                    <br><small>Coords: <span id="coordsBase"></span></small>
+                    <button class="btn btn-danger" onclick="limparBase()" style="margin-top: 8px;">Alterar</button>
+                </div>
+
+                <div id="mapaBase" style="height: 220px; border-radius: 10px; margin-top: 12px; display: none;"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">💰 Configuração de Custo</h2>
+                <div class="input-group">
+                    <input type="number" id="valorKm" placeholder="Valor por KM (ex: 1.30)" step="0.01" min="0">
+                    <button class="btn btn-primary" onclick="salvarValorKm()">Salvar Valor/KM</button>
+                </div>
+                <div id="infoValorKm" class="alert alert-info" style="display: none;">
+                    <strong>Valor atual:</strong> R$ <span id="valorKmDisplay">0,00</span>/km
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">🔗 Google Drive Sync</h2>
+                <div class="alert alert-info">
+                    <strong>Status:</strong> <span id="driveStatus">Não configurado</span>
+                </div>
+                <button class="btn btn-primary" onclick="inicializarGoogleDrive()" id="btnGoogleDrive" style="width: 100%; margin-top: 10px;">
+                    Configurar Sync com Google Drive
+                </button>
+                <div id="driveInfo" style="display: none;" class="alert alert-success">
+                    <strong>Sync ativo!</strong> Dados sincronizados automaticamente.
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA DESTINOS -->
+        <div id="destinos" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📍 Cadastrar Agência</h2>
+                <div class="input-group">
+                    <input type="text" id="nomeDestino" placeholder="Nome da agência">
+                    <input type="text" id="enderecoDestino" placeholder="Endereço completo">
+                    <button class="btn btn-primary" onclick="adicionarDestino()">
+                        <span id="btnDestinoText">Adicionar</span>
+                        <span id="btnDestinoLoading" class="loading" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Agências Cadastradas</h2>
+                <div id="listaDestinos" class="destinos-list"></div>
+            </div>
+        </div>
+
+        <!-- ABA VIAGEM -->
+        <div id="viagem" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">🚙 Montar Rota</h2>
+                
+                <div class="toggle-switch">
+                    <input type="checkbox" id="otimizarRota" onchange="atualizarOtimizacao()">
+                    <label for="otimizarRota">
+                        <strong>🧭 Otimizar rota automaticamente</strong>
+                        <br><small>Reordena as agências para minimizar KM</small>
+                    </label>
+                </div>
+
+                <button class="btn-gps" id="btnGPS" onclick="usarGPSAtual()">
+                    📍 Usar GPS Atual
+                </button>
+                
+                <div id="gpsInfo" class="gps-info" style="display: none;">
+                    <strong>GPS:</strong> <span id="gpsCoords"></span>
+                    <br><small>Usando como base temporária</small>
+                </div>
+
+                <div id="botoesDestinos" class="viagem-buttons"></div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">🗺️ Mapa da Rota</h2>
+                <div id="rotaInfo" style="display: none; background: #e6fffa; padding: 12px; border-radius: 8px; border-left: 4px solid #00b5b8; margin-bottom: 15px;">
+                    <strong>Calculando rota...</strong>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="sequencia">
+                <div class="sequencia-title">📋 Sequência</div>
+                <div id="sequenciaViagem" class="sequencia-items"></div>
+                <div class="total-km">
+                    <div>Total: <span id="totalKm">0 km</span></div>
+                    <small style="opacity: 0.8; font-size: 14px;">Distância arredondada pra cima</small>
+                </div>
+
+                <div id="detalhesViagem" style="display: none;">
+                    <div class="section" style="margin-top: 15px;">
+                        <h3 class="section-title">📝 Detalhes da Viagem</h3>
+                        
+                        <div class="input-group">
+                            <input type="number" id="kmInicial" placeholder="KM inicial do odômetro" min="0">
+                        </div>
+
+                        <div id="trechosDetalhes"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-success" onclick="prepararSalvamento()" id="btnPreparar" disabled style="flex: 1;">
+                        📝 Preencher Detalhes
+                    </button>
+                    <button class="btn btn-success" onclick="salvarViagem()" id="btnSalvar" disabled style="flex: 1; display: none;">
+                        💾 Salvar Viagem
+                    </button>
+                    <button class="btn btn-secondary" onclick="limparSequencia()" style="flex: 1;">
+                        🔄 Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA HISTÓRICO -->
+        <div id="historico" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📋 Histórico de Viagens</h2>
+                <div id="listaHistorico"></div>
+            </div>
+        </div>
+
+        <!-- ABA RELATÓRIO -->
+        <div id="relatorio" class="tab-content">
+            <div class="section">
+                <h2 class="section-title">📊 Estatísticas</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statHoje">0</div>
+                        <div class="stat-label">KM Hoje</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statMes">0</div>
+                        <div class="stat-label">KM Mês</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">KM Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statValor">R$ 0</div>
+                        <div class="stat-label">Valor Total</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">📤 Exportar</h2>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="exportarCSV()" style="flex: 1;">
+                        📊 CSV
+                    </button>
+                    <button class="btn btn-primary" onclick="exportarTXT()" style="flex: 1;">
+                        📄 TXT
+                    </button>
+                    <button class="btn btn-secondary" onclick="sincronizarManual()" style="flex: 1;">
+                        🔄 Sync Manual
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+        // Configurações Google Drive - SUBSTITUA pelos seus valores do Google Cloud Console
+        const CLIENT_ID = 'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com'; // Ex: 123456789-abcde.apps.googleusercontent.com
+        const API_KEY = 'SUA_API_KEY_AQUI'; // Crie em Credenciais > Chave de API
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        const FILE_NAME = 'controle-km-dados.json';
+
+        let gapiLoaded = false;
+        let gisLoaded = false;
+        let driveAuthenticated = false;
+        let tokenClient;
+        let fileId = null; // ID do arquivo no Drive
+
+        // Variáveis do app
+        let base = null;
+        let destinos = [];
+        let viagens = [];
+        let sequenciaAtual = [];
+        let trechosCalculados = [];
+        let map, rotaLayer, baseMap;
+        let posicaoGPSAtual = null;
+        let valorKm = 0;
+        const cacheCoordenadas = {};
+
+        // Inicialização do app
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarDadosLocais(); // Carrega do localStorage primeiro
+            inicializarBase();
+            inicializarValorKm();
+            atualizarListaDestinos();
+            atualizarBotoesDestinos();
+            atualizarHistorico();
+            atualizarEstatisticas();
+            initMap();
+            // Tenta inicializar sync Google Drive se já configurado
+            if (localStorage.getItem('driveAuthenticated') === 'true') {
+                driveAuthenticated = true;
+                document.getElementById('driveStatus').textContent = 'Autenticado';
+                document.getElementById('driveInfo').style.display = 'block';
+                document.getElementById('btnGoogleDrive').style.display = 'none';
+                // Recarrega fileId do localStorage se salvo
+                fileId = localStorage.getItem('driveFileId');
+                if (fileId) {
+                    sincronizarDados();
+                }
+            }
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'viagem' && (base || posicaoGPSAtual) && sequenciaAtual.length > 0) {
+                desenharRota();
+            } else if (tabName === 'relatorio') {
+                atualizarEstatisticas();
+            }
+        }
+
+        // Google Drive Sync Functions
+        function inicializarGoogleDrive() {
+            if (driveAuthenticated) {
+                sincronizarDados();
+                return;
+            }
+
+            if (gapiLoaded && gisLoaded) {
+                handleAuthClick();
+            } else {
+                gapi.load('client:auth2', () => {
+                    gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: [DISCOVERY_DOC],
+                        scope: SCOPES
+                    }).then(() => {
+                        gapiLoaded = true;
+                        if (gisLoaded) {
+                            handleAuthClick();
+                        }
+                    }).catch(err => {
+                        console.error('Erro inicializando GAPI:', err);
+                        alert('Erro ao inicializar Google Drive. Verifique CLIENT_ID e API_KEY.');
+                    });
+                });
+
+                // Carrega Google Identity Services
+                if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+                    const script = document.createElement('script');
+                    script.src = 'https://accounts.google.com/gsi/client';
+                    script.onload = () => {
+                        gisLoaded = true;
+                        if (gapiLoaded) {
+                            handleAuthClick();
+                        }
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    gisLoaded = true;
+                    if (gapiLoaded) {
+                        handleAuthClick();
+                    }
+                }
+            }
+        }
+
+        function handleAuthClick() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse.access_token) {
+                        driveAuthenticated = true;
+                        localStorage.setItem('driveAuthenticated', 'true');
+                        document.getElementById('driveStatus').textContent = 'Autenticado (fabinhonh@gmail.com)';
+                        document.getElementById('driveInfo').style.display = 'block';
+                        document.getElementById('btnGoogleDrive').style.display = 'none';
+                        buscarArquivoDrive().then(() => {
+                            sincronizarDados();
+                        });
+                        alert('✅ Sync com Google Drive ativado! Dados serão sincronizados automaticamente.');
+                    } else {
+                        alert('Falha na autenticação. Tente novamente.');
+                    }
+                },
+            });
+            tokenClient.requestAccessToken({prompt: ''});
+        }
+
+        async function buscarArquivoDrive() {
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: `name='${FILE_NAME}' and trashed=false`,
+                    fields: 'files(id, name, modifiedTime)'
+                });
+
+                if (response.result.files.length > 0) {
+                    fileId = response.result.files[0].id;
+                    localStorage.setItem('driveFileId', fileId);
+                    console.log('Arquivo encontrado:', fileId);
+                } else {
+                    // Cria novo arquivo
+                    const fileMetadata = {
+                        name: FILE_NAME,
+                        parents: ['root'] // Pasta raiz do Drive
+                    };
+                    const media = {
+                        mimeType: 'application/json',
+                        body: JSON.stringify({ version: 1, data: { base: null, destinos: [], viagens: [], valorKm: 0 } })
+                    };
+                    const createResponse = await gapi.client.drive.files.create({
+                        resource: fileMetadata,
+                        media: media
+                    });
+                    fileId = createResponse.result.id;
+                    localStorage.setItem('driveFileId', fileId);
+                    console.log('Novo arquivo criado:', fileId);
+                }
+            } catch (error) {
+                console.error('Erro ao buscar/criar arquivo:', error);
+                alert('Erro ao conectar com Drive. Verifique permissões.');
+            }
+        }
+
+        async function lerDadosDrive() {
+            if (!fileId || !driveAuthenticated) return null;
+
+            try {
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+                return JSON.parse(response.body);
+            } catch (error) {
+                console.error('Erro ao ler Drive:', error);
+                return null;
+            }
+        }
+
+        async function salvarDadosDrive(dados) {
+            if (!fileId || !driveAuthenticated) return;
+
+            try {
+                const media = {
+                    mimeType: 'application/json',
+                    body: JSON.stringify(dados)
+                };
+                await gapi.client.drive.files.update({
+                    fileId: fileId,
+                    media: media
+                });
+                mostrarSyncStatus('Sincronizado com Google Drive ✅');
+                console.log('Dados salvos no Drive');
+            } catch (error) {
+                console.error('Erro ao salvar Drive:', error);
+                mostrarSyncStatus('Erro no sync - tente manual');
+            }
+        }
+
+        async function sincronizarDados() {
+            mostrarSyncStatus('Sincronizando...');
+            const dadosDrive = await lerDadosDrive();
+
+            if (dadosDrive && dadosDrive.data) {
+                // Merge inteligente: local vence se mais recente, senão Drive
+                const ultimaModLocal = localStorage.getItem('ultimaMod') || 0;
+                const ultimaModDrive = dadosDrive.timestamp || 0;
+                
+                if (ultimaModLocal > ultimaModDrive) {
+                    // Local é mais recente, envia pro Drive
+                    const dados = {
+                        version: 1,
+                        data: { base, destinos, viagens, valorKm },
+                        timestamp: Date.now()
+                    };
+                    await salvarDadosDrive(dados);
+                } else {
+                    // Drive é mais recente ou igual, atualiza local
+                    if (dadosDrive.data.base) base = dadosDrive.data.base;
+                    if (dadosDrive.data.destinos) {
+                        // Merge destinos sem duplicatas
+                        destinos = [...destinos, ...dadosDrive.data.destinos].filter((d, i, arr) => arr.findIndex(x => x.id === d.id) === i);
+                    }
+                    if (dadosDrive.data.viagens) {
+                        // Merge viagens, ordena por data
+                        viagens = [...viagens, ...dadosDrive.data.viagens].sort((a, b) => new Date(b.data) - new Date(a.data));
+                    }
+                    if (dadosDrive.data.valorKm) valorKm = dadosDrive.data.valorKm;
+
+                    localStorage.setItem('ultimaMod', Date.now().toString());
+                    salvarDadosLocais();
+                    atualizarInterface();
+                }
+                mostrarSyncStatus('Sincronizado com Google Drive ✅');
+            } else {
+                // Salva local pro Drive
+                const dados = {
+                    version: 1,
+                    data: { base, destinos, viagens, valorKm },
+                    timestamp: Date.now()
+                };
+                await salvarDadosDrive(dados);
+                localStorage.setItem('ultimaMod', Date.now().toString());
+            }
+        }
+
+        function mostrarSyncStatus(mensagem) {
+            const status = document.getElementById('syncStatus');
+            document.getElementById('syncMessage').textContent = mensagem;
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 3000);
+        }
+
+        function sincronizarManual() {
+            if (!driveAuthenticated) {
+                alert('Configure o sync primeiro na aba Base.');
+                switchTab('config');
+                return;
+            }
+            sincronizarDados();
+        }
+
+        // Funções de dados locais (fallback offline)
+        function carregarDadosLocais() {
+            try {
+                base = JSON.parse(localStorage.getItem('base')) || null;
+                destinos = JSON.parse(localStorage.getItem('destinos')) || [];
+                viagens = JSON.parse(localStorage.getItem('viagens')) || [];
+                valorKm = parseFloat(localStorage.getItem('valorKm')) || 0;
+                // Carrega cache de coordenadas
+                const cacheStr = localStorage.getItem('cacheCoords');
+                if (cacheStr) {
+                    cacheCoordenadas = JSON.parse(cacheStr);
+                }
+            } catch (e) {
+                console.error('Erro carregando dados locais:', e);
+                // Reset se corrompido
+                base = null;
+                destinos = [];
+                viagens = [];
+                valorKm = 0;
+            }
+        }
+
+        function salvarDadosLocais() {
+            localStorage.setItem('base', JSON.stringify(base));
+            localStorage.setItem('destinos', JSON.stringify(destinos));
+            localStorage.setItem('viagens', JSON.stringify(viagens));
+            localStorage.setItem('valorKm', valorKm.toString());
+            localStorage.setItem('cacheCoords', JSON.stringify(cacheCoordenadas));
+            localStorage.setItem('ultimaMod', Date.now().toString());
+        }
+
+        function atualizarInterface() {
+            inicializarBase();
+            inicializarValorKm();
+            atualizarListaDestinos();
+            atualizarBotoesDestinos();
+            atualizarHistorico();
+            atualizarEstatisticas();
+            if (map && base) {
+                initMap();
+            }
+        }
+
+        // Funções de valor KM
+        function inicializarValorKm() {
+            if (valorKm > 0) {
+                document.getElementById('valorKm').value = valorKm.toFixed(2);
+                document.getElementById('infoValorKm').style.display = 'block';
+                document.getElementById('valorKmDisplay').textContent = valorKm.toFixed(2);
+            }
+        }
+
+        function salvarValorKm() {
+            const valor = parseFloat(document.getElementById('valorKm').value);
+            if (isNaN(valor) || valor <= 0) {
+                alert('Digite um valor válido (ex: 1.30)');
+                return;
+            }
+            valorKm = valor;
+            salvarDadosLocais();
+            if (driveAuthenticated) {
+                sincronizarDados();
+            }
+            document.getElementById('infoValorKm').style.display = 'block';
+            document.getElementById('valorKmDisplay').textContent = valor.toFixed(2);
+            alert('✅ Valor salvo: R$ ' + valor.toFixed(2) + '/km');
+        }
+
+        // Função GPS
+        async function usarGPSAtual() {
+            const btnGPS = document.getElementById('btnGPS');
+            btnGPS.disabled = true;
+            btnGPS.innerHTML = '<span class="loading"></span> Buscando GPS...';
+
+            if (!navigator.geolocation) {
+                alert('GPS não suportado. Use base fixa.');
+                btnGPS.disabled = false;
+                btnGPS.innerHTML = '📍 Usar GPS Atual';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Reverse geocoding pra pegar endereço aproximado
+                    const enderecoGPS = await reverseGeocode(lat, lng);
+                    
+                    posicaoGPSAtual = {
+                        lat,
+                        lng,
+                        nome: 'GPS Atual',
+                        endereco: enderecoGPS || 'Localização detectada'
+                    };
+
+                    document.getElementById('gpsInfo').style.display = 'block';
+                    document.getElementById('gpsCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+                    if (map) {
+                        map.setView([lat, lng], 15);
+                        L.marker([lat, lng]).addTo(map)
+                            .bindPopup(`<b>Você está aqui</b><br>${enderecoGPS || 'GPS detectado'}`)
+                            .openPopup();
+                    }
+
+                    btnGPS.disabled = false;
+                    btnGPS.innerHTML = '✅ GPS Ativo';
+                    atualizarBotoesDestinos();
+                    alert('✅ GPS capturado!');
+                },
+                (error) => {
+                    alert('Erro GPS: ' + error.message + '. Use base fixa.');
+                    btnGPS.disabled = false;
+                    btnGPS.innerHTML = '📍 Usar GPS Atual';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        async function reverseGeocode(lat, lng) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&countrycodes=br`;
+                const response = await fetch(url, { headers: { 'User-Agent': 'ControleKM/1.0' } });
+                const data = await response.json();
+                return data.display_name || 'Endereço não identificado';
+            } catch (error) {
+                console.error('Erro reverse geocoding:', error);
+                return null;
+            }
+        }
+
+        // Funções de base
+        function inicializarBase() {
+            if (base) {
+                document.getElementById('enderecoBase').value = base.endereco;
+                document.getElementById('infoBase').style.display = 'block';
+                document.getElementById('enderecoBaseDisplay').textContent = base.endereco;
+                document.getElementById('coordsBase').textContent = `${base.lat.toFixed(6)}, ${base.lng.toFixed(6)}`;
+                document.getElementById('btnBaseText').textContent = 'Atualizar';
+                initBaseMap();
+                atualizarBotoesDestinos();
+            }
+        }
+
+        async function configurarBase() {
+            const endereco = document.getElementById('enderecoBase').value.trim();
+            
+            if (!endereco) {
+                alert('Digite o endereço da superintendência.');
+                return;
+            }
+
+            document.getElementById('btnBaseText').style.display = 'none';
+            document.getElementById('btnBaseLoading').style.display = 'inline-block';
+
+            try {
+                const coords = await buscarCoordenadas(endereco, true);
+                if (!coords) {
+                    alert('Endereço não encontrado. Tente ser mais específico.');
+                    return;
+                }
+
+                base = {
+                    id: 'base',
+                    endereco,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    nome: 'Base Fixa'
+                };
+
+                salvarDadosLocais();
+                if (driveAuthenticated) {
+                    sincronizarDados();
+                }
+
+                inicializarBase();
+                atualizarBotoesDestinos();
+                alert('✅ Base salva!');
+                
+            } catch (error) {
+                console.error('Erro configurando base:', error);
+                alert('Erro ao salvar base. Verifique conexão.');
+            } finally {
+                document.getElementById('btnBaseText').style.display = 'inline';
+                document.getElementById('btnBaseLoading').style.display = 'none';
+            }
+        }
+
+        function limparBase() {
+            if (confirm('Alterar base? Isso limpará a configuração atual.')) {
+                localStorage.removeItem('base');
+                base = null;
+                document.getElementById('infoBase').style.display = 'none';
+                document.getElementById('mapaBase').style.display = 'none';
+                document.getElementById('enderecoBase').value = '';
+                document.getElementById('btnBaseText').textContent = 'Salvar';
+                if (driveAuthenticated) {
+                    sincronizarDados();
+                }
+                atualizarBotoesDestinos();
+                alert('Base limpa. Configure uma nova.');
+            }
+        }
+
+        function initBaseMap() {
+            if (!base) return;
+            
+            const mapaBaseEl = document.getElementById('mapaBase');
+            if (baseMap) {
+                baseMap.remove();
+            }
+            
+            baseMap = L.map(mapaBaseEl.id).setView([base.lat, base.lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(baseMap);
+            
+            L.marker([base.lat, base.lng]).addTo(baseMap)
+                .bindPopup(`<b>Base Fixa</b><br>${base.endereco}`)
+                .openPopup();
+                
+            mapaBaseEl.style.display = 'block';
+        }
+
+        async function buscarCoordenadas(endereco, isBase = false) {
+            const cacheKey = endereco.toLowerCase();
+            
+            if (cacheCoordenadas[cacheKey]) {
+                return cacheCoordenadas[cacheKey];
+            }
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}&limit=1&countrycodes=br&addressdetails=1`;
+            
+            try {
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': 'ControleKM/1.0' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erro na API de geocodificação');
+                }
+                
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const coords = { 
+                        lat: parseFloat(data[0].lat), 
+                        lng: parseFloat(data[0].lon) 
+                    };
+                    cacheCoordenadas[cacheKey] = coords;
+                    salvarDadosLocais(); // Salva cache
+                    return coords;
+                } else {
+                    alert('Endereço não encontrado. Tente refinar a busca.');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Erro geocoding:', error);
+                alert('Erro ao buscar coordenadas. Verifique conexão.');
+                return null;
+            }
+        }
+    </script>
+        // Funções de destinos
+        async function adicionarDestino() {
+            const nome = document.getElementById('nomeDestino').value.trim();
+            const endereco = document.getElementById('enderecoDestino').value.trim();
+
+            if (!nome || !endereco) {
+                alert('Preencha nome e endereço da agência.');
+                return;
+            }
+
+            if (!base && !posicaoGPSAtual) {
+                alert('Configure base fixa ou use GPS atual primeiro.');
+                switchTab('config');
+                return;
+            }
+
+            document.getElementById('btnDestinoText').style.display = 'none';
+            document.getElementById('btnDestinoLoading').style.display = 'inline-block';
+
+            try {
+                const coords = await buscarCoordenadas(endereco);
+                if (!coords) {
+                    alert('Endereço não encontrado. Tente refinar.');
+                    return;
+                }
+
+                const novoDestino = {
+                    id: Date.now(),
+                    nome,
+                    endereco,
+                    lat: coords.lat,
+                    lng: coords.lng
+                };
+
+                destinos.push(novoDestino);
+                salvarDadosLocais();
+                if (driveAuthenticated) {
+                    sincronizarDados();
+                }
+                
+                document.getElementById('nomeDestino').value = '';
+                document.getElementById('enderecoDestino').value = '';
+
+                atualizarListaDestinos();
+                atualizarBotoesDestinos();
+                
+                alert(`✅ Agência "${nome}" adicionada!`);
+                
+            } catch (error) {
+                console.error('Erro adicionando destino:', error);
+                alert('Erro ao adicionar agência. Verifique conexão.');
+            } finally {
+                document.getElementById('btnDestinoText').style.display = 'inline';
+                document.getElementById('btnDestinoLoading').style.display = 'none';
+            }
+        }
+
+        function atualizarListaDestinos() {
+            const lista = document.getElementById('listaDestinos');
+            
+            if (destinos.length === 0) {
+                lista.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📍</div>
+                        <p>Nenhuma agência cadastrada</p>
+                        <small>Cadastre agências para montar rotas</small>
+                    </div>
+                `;
+                return;
+            }
+
+            lista.innerHTML = destinos.map(destino => `
+                <div class="destino-item">
+                    <div class="destino-name">${destino.nome}</div>
+                    <div class="destino-address">${destino.endereco}</div>
+                    <small style="color: #718096; font-size: 11px;">Coords: ${destino.lat.toFixed(4)}, ${destino.lng.toFixed(4)}</small>
+                    <button class="btn btn-danger" onclick="removerDestino(${destino.id})" style="margin-top: 8px;">
+                        🗑️ Remover
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removerDestino(id) {
+            if (confirm('Remover esta agência? Isso não afeta viagens salvas.')) {
+                destinos = destinos.filter(d => d.id !== id);
+                // Remove da sequência atual se estiver lá
+                sequenciaAtual = sequenciaAtual.filter(s => s.id !== id);
+                salvarDadosLocais();
+                if (driveAuthenticated) {
+                    sincronizarDados();
+                }
+                atualizarListaDestinos();
+                atualizarBotoesDestinos();
+                atualizarSequencia();
+                alert('Agência removida.');
+            }
+        }
+
+        function atualizarBotoesDestinos() {
+            const container = document.getElementById('botoesDestinos');
+            
+            if (!base && !posicaoGPSAtual) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p>Configure base fixa ou use GPS atual</p>
+                        <small>Preciso saber de onde você sai</small>
+                    </div>
+                `;
+                return;
+            }
+
+            if (destinos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📍</div>
+                        <p>Cadastre agências primeiro</p>
+                        <small>Vá na aba Destinos</small>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = destinos.map(destino => {
+                const selecionado = sequenciaAtual.some(s => s.id === destino.id);
+                return `
+                    <button class="destino-btn ${selecionado ? 'selected' : ''}" onclick="adicionarNaSequencia(${destino.id})">
+                        <div class="destino-name">${destino.nome}</div>
+                        <div class="destino-address">${destino.endereco.split(',')[0]}</div>
+                        ${selecionado ? '<small style="color: rgba(255,255,255,0.8);">Na rota</small>' : ''}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function adicionarNaSequencia(id) {
+            const destino = destinos.find(d => d.id === id);
+            if (!destino) return;
+            
+            if (sequenciaAtual.some(s => s.id === id)) {
+                alert('Agência já está na rota!');
+                return;
+            }
+            
+            sequenciaAtual.push(destino);
+            atualizarSequencia();
+            atualizarBotoesDestinos();
+        }
+
+        function atualizarOtimizacao() {
+            if (sequenciaAtual.length > 0) {
+                desenharRota();
+            }
+        }
+
+        function atualizarSequencia() {
+            const container = document.getElementById('sequenciaViagem');
+            const totalElement = document.getElementById('totalKm');
+
+            if (sequenciaAtual.length === 0) {
+                container.innerHTML = `
+                    <div style="color: #a0aec0; text-align: center; padding: 20px; font-size: 14px;">
+                        Clique nas agências para montar a rota<br>
+                        <small>Retorno à base sempre incluído</small>
+                    </div>
+                `;
+                totalElement.textContent = '0 km';
+                document.getElementById('btnPreparar').disabled = true;
+                document.getElementById('detalhesViagem').style.display = 'none';
+                if (rotaLayer) {
+                    map.removeLayer(rotaLayer);
+                }
+                return;
+            }
+
+            container.innerHTML = sequenciaAtual.map((destino, index) => `
+                <div class="sequencia-item">
+                    <div class="sequencia-number">${index + 1}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; font-size: 14px;">${destino.nome}</div>
+                        <small style="color: #666; font-size: 12px;">${destino.endereco.split(',').slice(0,2).join(',')}</small>
+                    </div>
+                    <button class="btn btn-danger" onclick="removerDaSequencia(${index})" style="padding: 6px 10px; font-size: 12px;">×</button>
+                </div>
+            `).join('');
+
+            desenharRota();
+        }
+
+        function removerDaSequencia(index) {
+            sequenciaAtual.splice(index, 1);
+            atualizarSequencia();
+            atualizarBotoesDestinos();
+        }
+
+        function limparSequencia() {
+            sequenciaAtual = [];
+            trechosCalculados = [];
+            document.getElementById('gpsInfo').style.display = 'none';
+            document.getElementById('btnGPS').innerHTML = '📍 Usar GPS Atual';
+            document.getElementById('btnGPS').disabled = false;
+            document.getElementById('detalhesViagem').style.display = 'none';
+            document.getElementById('btnPreparar').style.display = 'block';
+            document.getElementById('btnSalvar').style.display = 'none';
+            if (rotaLayer) {
+                map.removeLayer(rotaLayer);
+            }
+            atualizarSequencia();
+            atualizarBotoesDestinos();
+        }
+
+        // Inicialização do mapa
+        function initMap() {
+            const mapEl = document.getElementById('map');
+            if (!mapEl) return;
+            
+            map = L.map(mapEl.id).setView([-29.94, -50.99], 12); // Porto Alegre como default
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            if (base) {
+                L.marker([base.lat, base.lng]).addTo(map)
+                    .bindPopup(`<b>Base Fixa</b><br>${base.endereco}`)
+                    .openPopup();
+                map.setView([base.lat, base.lng], 13);
+            } else if (posicaoGPSAtual) {
+                L.marker([posicaoGPSAtual.lat, posicaoGPSAtual.lng]).addTo(map)
+                    .bindPopup(`<b>GPS Atual</b><br>${posicaoGPSAtual.endereco}`);
+                map.setView([posicaoGPSAtual.lat, posicaoGPSAtual.lng], 15);
+            }
+        }
+
+        // Desenhar rota com OSRM
+        async function desenharRota() {
+            if (rotaLayer) {
+                map.removeLayer(rotaLayer);
+            }
+
+            const statusDiv = document.getElementById('rotaInfo');
+            const totalElement = document.getElementById('totalKm');
+
+            if (sequenciaAtual.length === 0) {
+                statusDiv.style.display = 'none';
+                totalElement.textContent = '0 km';
+                return;
+            }
+
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<strong>Calculando rota...</strong>';
+            totalElement.textContent = 'Calculando...';
+
+            try {
+                const pontoInicial = posicaoGPSAtual || base;
+                if (!pontoInicial) {
+                    alert('Configure base ou use GPS primeiro.');
+                    return;
+                }
+
+                let sequenciaFinal = [...sequenciaAtual];
+                
+                // Otimização de rota se ativada
+                if (document.getElementById('otimizarRota').checked && sequenciaAtual.length > 1) {
+                    const coordsParaOtimizar = [pontoInicial, ...sequenciaAtual].map(p => `${p.lng},${p.lat}`).join(';');
+                    const urlTrip = `https://router.project-osrm.org/trip/v1/driving/${coordsParaOtimizar}?source=first&destination=first&roundtrip=true`;
+                    
+                    const tripResponse = await fetch(urlTrip);
+                    const tripData = await tripResponse.json();
+                    
+                    if (tripData.code === 'Ok' && tripData.trips.length > 0) {
+                        const ordemOtimizada = tripData.waypoints.map(wp => wp.waypoint_index);
+                        sequenciaFinal = ordemOtimizada.slice(1, -1).map(idx => sequenciaAtual[idx - 1]);
+                        console.log('Rota otimizada:', sequenciaFinal.map(s => s.nome));
+                    }
+                }
+
+                // Rota completa: base → agências → base
+                const pontosRota = [pontoInicial, ...sequenciaFinal, pontoInicial];
+                const coordenadas = pontosRota.map(p => `${p.lng},${p.lat}`).join(';');
+
+                const url = `https://router.project-osrm.org/route/v1/driving/${coordenadas}?overview=full&geometries=geojson&steps=true`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    const rota = data.routes[0];
+                    
+                    // Calcular trechos individuais com arredondamento pra cima
+                    trechosCalculados = [];
+                    let kmAcumulado = 0;
+                    
+                    rota.legs.forEach((leg, index) => {
+                        const kmTrecho = Math.ceil(leg.distance / 1000); // Arredonda pra cima
+                        const origem = index === 0 ? (pontoInicial.nome || pontoInicial.endereco) : sequenciaFinal[index - 1].nome;
+                        const destino = index === rota.legs.length - 1 ? (pontoInicial.nome || pontoInicial.endereco) : sequenciaFinal[index].nome;
+                        
+                        trechosCalculados.push({
+                            numero: index + 1,
+                            origem,
+                            destino,
+                            kmTrecho,
+                            temPedagio: false,
+                            valorPedagio: 0
+                        });
+                        
+                        kmAcumulado += kmTrecho;
+                    });
+
+                    // Desenhar no mapa
+                    rotaLayer = L.geoJSON(rota.geometry, {
+                        style: {
+                            color: '#e74c3c',
+                            weight: 5,
+                            opacity: 0.8
+                        }
+                    }).addTo(map);
+
+                    // Marcadores
+                    pontosRota.forEach((ponto, index) => {
+                        const popupText = index === 0 || index === pontosRota.length - 1 
+                            ? `<b>${ponto.nome || 'Base'}</b><br>${ponto.endereco || ''}`
+                            : `<b>${ponto.nome}</b><br>${ponto.endereco}`;
+                        L.marker([ponto.lat, ponto.lng]).addTo(map)
+                            .bindPopup(popupText);
+                    });
+
+                    map.fitBounds(rotaLayer.getBounds().pad(0.1));
+
+                    const tempoMinutos = Math.round(rota.duration / 60);
+                    totalElement.innerHTML = `${kmAcumulado} km <small>(~${tempoMinutos} min)</small>`;
+                    statusDiv.style.display = 'none';
+                    document.getElementById('btnPreparar').disabled = false;
+
+                } else {
+                    throw new Error('Rota não encontrada');
+                }
+            } catch (error) {
+                console.error('Erro calculando rota:', error);
+                totalElement.textContent = 'Erro no cálculo';
+                statusDiv.innerHTML = '<strong>Erro ao calcular rota. Verifique conexão.</strong>';
+                alert('Erro ao calcular rota. Tente novamente.');
+            }
+        }
+
+        // Preparar e salvar viagem
+        function prepararSalvamento() {
+            if (valorKm === 0) {
+                alert('Configure o valor por KM na aba Base primeiro!');
+                switchTab('config');
+                return;
+            }
+
+            if (trechosCalculados.length === 0) {
+                alert('Calcule a rota primeiro clicando nas agências!');
+                return;
+            }
+
+            document.getElementById('detalhesViagem').style.display = 'block';
+            document.getElementById('btnPreparar').style.display = 'none';
+            document.getElementById('btnSalvar').style.display = 'block';
+            document.getElementById('btnSalvar').disabled = false;
+
+            const container = document.getElementById('trechosDetalhes');
+            container.innerHTML = trechosCalculados.map((trecho, index) => `
+                <div class="trecho-item">
+                    <div class="trecho-header">Trecho ${trecho.numero}: ${trecho.origem} → ${trecho.destino}</div>
+                    <div class="trecho-info">
+                        <div><strong>Distância:</strong> ${trecho.kmTrecho} km (arredondado)</div>
+                        <div><strong>Valor estimado:</strong> R$ ${(trecho.kmTrecho * valorKm).toFixed(2)}</div>
+                    </div>
+                    <div class="trecho-pedagio">
+                        <input type="checkbox" id="pedagio${index}" onchange="atualizarPedagio(${index})">
+                        <label for="pedagio${index}">Teve pedágio?</label>
+                        <input type="number" id="valorPedagio${index}" placeholder="R$ 0,00" step="0.01" min="0" style="width: 100px; display: none; margin-left: 8px;" onchange="atualizarValorPedagio(${index})">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function atualizarPedagio(index) {
+            const checkbox = document.getElementById(`pedagio${index}`);
+            const inputValor = document.getElementById(`valorPedagio${index}`);
+            
+            if (checkbox.checked) {
+                inputValor.style.display = 'inline-block';
+                trechosCalculados[index].temPedagio = true;
+            } else {
+                inputValor.style.display = 'none';
+                inputValor.value = '';
+                trechosCalculados[index].temPedagio = false;
+                trechosCalculados[index].valorPedagio = 0;
+            }
+        }
+
+        function atualizarValorPedagio(index) {
+            const valor = parseFloat(document.getElementById(`valorPedagio${index}`).value) || 0;
+            trechosCalculados[index].valorPedagio = valor;
+        }
+
+        function salvarViagem() {
+            const kmInicial = parseInt(document.getElementById('kmInicial').value);
+            
+            if (isNaN(kmInicial) || kmInicial < 0) {
+                alert('Informe o KM inicial do odômetro (número inteiro).');
+                return;
+            }
+
+            if (trechosCalculados.length === 0) {
+                alert('Nenhum trecho calculado!');
+                return;
+            }
+
+            let kmAtual = kmInicial;
+            const trechosComOdometro = trechosCalculados.map(trecho => {
+                const kmFinal = kmAtual + trecho.kmTrecho;
+                const trechoCompleto = {
+                    ...trecho,
+                    kmInicial: kmAtual,
+                    kmFinal,
+                    valorKm: valorKm,
+                    valorEstimado: trecho.kmTrecho * valorKm
+                };
+                kmAtual = kmFinal;
+                return trechoCompleto;
+            });
+
+            const viagem = {
+                id: Date.now(),
+                data: new Date().toISOString(),
+                base: posicaoGPSAtual ? posicaoGPSAtual.endereco : base.endereco,
+                sequencia: sequenciaAtual.map(s => s.nome), // Ordem das agências
+                trechos: trechosComOdometro,
+                kmTotal: trechosComOdometro.reduce((sum, t) => sum + t.kmTrecho, 0),
+                valorTotal: trechosComOdometro.reduce((sum, t) => sum + t.valorEstimado, 0),
+                pedagiosTotal: trechosComOdometro.reduce((sum, t) => sum + t.valorPedagio, 0),
+                kmInicial: kmInicial,
+                kmFinal: kmAtual
+            };
+
+            viagens.push(viagem);
+            salvarDadosLocais();
+            if (driveAuthenticated) {
+                sincronizarDados();
+            }
+
+            const totalPedagios = viagem.pedagiosTotal.toFixed(2);
+            alert(`✅ Viagem salva!\n\n📏 Total: ${viagem.kmTotal} km\n💰 Valor KM: R$ ${viagem.valorTotal.toFixed(2)}\n🛣️ Pedágios: R$ ${totalPedagios > 0 ? totalPedagios : '0,00'}\n\nDetalhes no histórico.`);
+            
+            limparSequencia();
+            atualizarHistorico();
+            atualizarEstatisticas();
+            switchTab('historico');
+        }
+
+        // Histórico
+        function atualizarHistorico() {
+            const lista = document.getElementById('listaHistorico');
+            
+            if (viagens.length === 0) {
+                lista.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>Nenhuma viagem registrada</p>
+                        <small>Salve sua primeira rota!</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const viagensOrdenadas = [...viagens].sort((a, b) => new Date(b.data) - new Date(a.data));
+            
+            lista.innerHTML = viagensOrdenadas.map(viagem => {
+                const data = new Date(viagem.data);
+                const dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                const numTrechos = viagem.trechos.length;
+                const pedagios = viagem.pedagiosTotal > 0 ? ` + R$ ${viagem.pedagiosTotal.toFixed(2)}` : '';
+                
+                return `
+                    <div class="historico-item">
+                        <button class="btn btn-danger historico-delete" onclick="excluirViagem(${viagem.id})" title="Excluir">🗑️</button>
+                        <div class="historico-date">${dataFormatada}</div>
+                        <div class="historico-route">🏠 ${viagem.base.substring(0, 30)}... → ${numTrechos} trechos</div>
+                        <div class="historico-km">
+                            📏 ${viagem.kmTotal} km | 💰 R$ ${viagem.valorTotal.toFixed(2)}${pedagios}
+                            <br><small>KM inicial: ${viagem.kmInicial} | Final: ${viagem.kmFinal}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function excluirViagem(id) {
+            if (confirm('Excluir esta viagem? Isso remove do histórico e sync.')) {
+                viagens = viagens.filter(v => v.id !== id);
+                salvarDadosLocais();
+                if (driveAuthenticated) {
+                    sincronizarDados();
+                }
+                atualizarHistorico();
+                atualizarEstatisticas();
+                alert('Viagem excluída.');
+            }
+        }
+
+        // Estatísticas
+        function atualizarEstatisticas() {
+            const hoje = new Date().toDateString();
+            const primeiroDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toDateString();
+
+            let kmHoje = 0, kmMes = 0, kmTotal = 0, valorTotal = 0;
+
+            viagens.forEach(viagem => {
+                const dataViagem = new Date(viagem.data).toDateString();
+                kmTotal += viagem.kmTotal;
+                valorTotal += viagem.valorTotal + viagem.pedagiosTotal;
+
+                if (dataViagem === hoje) {
+                    kmHoje += viagem.kmTotal;
+                }
+                if (dataViagem >= primeiroDiaMes) {
+                    kmMes += viagem.kmTotal;
+                }
+            });
+
+            document.getElementById('statHoje').textContent = kmHoje;
+            document.getElementById('statMes').textContent = kmMes;
+            document.getElementById('statTotal').textContent = kmTotal;
+            document.getElementById('statValor').textContent = `R$ ${valorTotal.toFixed(0)}`;
+        }
+
+        // Exportação
+        function exportarCSV() {
+            if (viagens.length === 0) {
+                alert('Nenhuma viagem para exportar.');
+                return;
+            }
+
+            let csv = 'Data,Trecho,Origem,Destino,KM Inicial,KM Final,Distância (km),Valor KM (R$),Pedágio (R$)\n';
+            
+            viagens.forEach(viagem => {
+                viagem.trechos.forEach(trecho => {
+                    const data = new Date(viagem.data).toLocaleDateString('pt-BR');
+                    csv += `"${data}","${trecho.numero}","${trecho.origem}","${trecho.destino}",${trecho.kmInicial},${trecho.kmFinal},${trecho.kmTrecho},"${trecho.valorEstimado.toFixed(2)}","${trecho.valorPedagio.toFixed(2)}"\n';
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `relatorio-km-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        function exportarTXT() {
+            if (viagens.length === 0) {
+                alert('Nenhuma viagem para exportar.');
+                return;
+            }
+
+            let txt = 'RELATÓRIO DE VIAGENS - Controle de KM\n';
+            txt += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+
+            let totalGeralKM = 0, totalGeralValor = 0, totalGeralPedagios = 0;
+
+            viagens.forEach(viagem => {
+                const data = new Date(viagem.data).toLocaleDateString('pt-BR');
+                txt += `VIAGEM: ${data} - Base: ${viagem.base}\n`;
+                txt += `Sequência: ${viagem.sequencia.join(' → ')} → Base\n`;
+                txt += `KM Inicial: ${viagem.kmInicial} | KM Final: ${viagem.kmFinal} | Total KM: ${viagem.kmTotal}\n\n`;
+
+                viagem.trechos.forEach(trecho => {
+                    txt += `Trecho ${trecho.numero}: ${trecho.origem} → ${trecho.destino}\n`;
+                    txt += `  KM: ${trecho.kmInicial} → ${trecho.kmFinal} (${trecho.kmTrecho} km)\n`;
+                    txt += `  Valor KM: R$ ${trecho.valorEstimado.toFixed(2)}\n`;
+                    if (trecho.valorPedagio > 0) {
+                        txt += `  Pedágio: R$ ${trecho.valorPedagio.toFixed(2)}\n`;
+                    }
+                    txt += '\n';
+                });
+
+                txt += `SUBTOTAL: R$ ${viagem.valorTotal.toFixed(2)} + Pedágios R$ ${viagem.pedagiosTotal.toFixed(2)} = R$ ${(viagem.valorTotal + viagem.pedagiosTotal).toFixed(2)}\n\n`;
+
+                totalGeralKM += viagem.kmTotal;
+                totalGeralValor += viagem.valorTotal;
+                totalGeralPedagios += viagem.pedagiosTotal;
+            });
+
+            txt += `GRAND TOTAL:\n`;
+            txt += `KM Total: ${totalGeralKM}\n`;
+            txt += `Valor Total KM: R$ ${totalGeralValor.toFixed(2)}\n`;
+            txt += `Pedágios Total: R$ ${totalGeralPedagios.toFixed(2)}\n`;
+            txt += `VALOR FINAL: R$ ${(totalGeralValor + totalGeralPedagios).toFixed(2)}\n`;
+
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `relatorio-km-${new Date().toISOString().split('T')[0]}.txt`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
+
+
+
+      
